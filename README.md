@@ -1,4 +1,8 @@
-# 🕵️ Spyware Tool 
+# 🕵️ Spyware Tool (Educational Purpose Only)
+
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Last Commit](https://img.shields.io/github/last-commit/harris9559/Spyware_tool?label=Last%20Update&color=green)
 
 This project is a **Python-based spyware simulation tool** developed for ethical hacking research and cybersecurity education.
 
@@ -8,11 +12,11 @@ This project is a **Python-based spyware simulation tool** developed for ethical
 
 ## 🚀 Features
 
-- ✅ Keystroke logging
-- 📸 Screenshot capture
-- 🎙️ Microphone audio recording
-- 📷 Webcam image capture
-- 🌍 Geolocation via IP
+- ✅ Keystroke logging  
+- 📸 Screenshot capture  
+- 🎙️ Microphone audio recording  
+- 📷 Webcam image capture  
+- 🌍 Geolocation via IP  
 - 📤 Real-time data upload to Telegram bot
 
 ---
@@ -37,7 +41,6 @@ Copy
 Edit
 TELEGRAM_TOKEN=your_bot_token
 CHAT_ID=your_chat_id
-
 ⚙️ How it Works
 On startup, the script collects system info, location, and media (audio, webcam, screenshot).
 
@@ -46,7 +49,6 @@ It logs keystrokes continuously and sends them to a Telegram bot at intervals or
 Audio and screenshots are recorded in the background and sent silently.
 
 📦 Dependencies
-
 pynput
 
 pyautogui
@@ -70,13 +72,18 @@ Copy
 Edit
 pip install -r requirements.txt
 🧪 For Testing / Simulation Only
-
 Tested on Windows 10
+
 Make sure you run with administrator privileges if certain permissions fail
+
 Recommended to use inside a virtual machine or isolated lab environment
 
+📜 License
+MIT License. See LICENSE file.
+
 🤖 Developed By
-
 Harshit Pandey
-
 GitHub: @harris9559
+
+
+
