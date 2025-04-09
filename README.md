@@ -37,6 +37,7 @@ Copy
 Edit
 TELEGRAM_TOKEN=your_bot_token
 CHAT_ID=your_chat_id
+
 ⚙️ How it Works
 On startup, the script collects system info, location, and media (audio, webcam, screenshot).
 
@@ -46,19 +47,12 @@ Audio and screenshots are recorded in the background and sent silently.
 
 📦 Dependencies
 pynput
-
 pyautogui
-
 opencv-python
-
 sounddevice
-
 soundfile
-
 geocoder
-
 python-dotenv
-
 requests
 
 Install all with:
@@ -68,15 +62,13 @@ Copy
 Edit
 pip install -r requirements.txt
 🧪 For Testing / Simulation Only
+
 Tested on Windows 10
-
 Make sure you run with administrator privileges if certain permissions fail
-
 Recommended to use inside a virtual machine or isolated lab environment
 
-📜 License
-MIT License. See LICENSE file.
-
 🤖 Developed By
+
 Harshit Pandey
+
 GitHub: @harris9559
