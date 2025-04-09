@@ -1,4 +1,4 @@
-# 🕵️ Spyware Tool (Educational Purpose Only)
+# 🕵️ Spyware Tool 
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
