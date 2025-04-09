@@ -46,13 +46,21 @@ It logs keystrokes continuously and sends them to a Telegram bot at intervals or
 Audio and screenshots are recorded in the background and sent silently.
 
 📦 Dependencies
+
 pynput
+
 pyautogui
+
 opencv-python
+
 sounddevice
+
 soundfile
+
 geocoder
+
 python-dotenv
+
 requests
 
 Install all with:
