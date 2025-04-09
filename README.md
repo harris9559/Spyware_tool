@@ -1,89 +1,101 @@
-# 🕵️ Spyware Tool 
+# 🕵️‍♂️ Spyware Tool
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Last Commit](https://img.shields.io/github/last-commit/harris9559/Spyware_tool?label=Last%20Update&color=green)
 
-This project is a **Python-based spyware simulation tool** developed for ethical hacking research and cybersecurity education.
 
-> ⚠️ **Disclaimer:** This tool is intended strictly for educational use and ethical testing in controlled environments. Unauthorized use on others' systems without permission is illegal.
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows-orange.svg)
+![Build](https://img.shields.io/badge/Build-PyInstaller-yellow.svg)
+
+
+
+A Python-based spyware simulation project built for educational and ethical hacking research. This tool demonstrates common surveillance techniques, packaged into a standalone executable using PyInstaller.
+
+> ⚠️ **Disclaimer**: This project is for **educational purposes only**. Unauthorized surveillance is illegal and unethical. Always obtain proper consent.
 
 ---
 
-## 🚀 Features
+## 🔧 Features
 
-- ✅ Keystroke logging  
-- 📸 Screenshot capture  
-- 🎙️ Microphone audio recording  
-- 📷 Webcam image capture  
-- 🌍 Geolocation via IP  
-- 📤 Real-time data upload to Telegram bot
+- 📸 Webcam access
+- 🖱️ Screenshot capture
+- 📂 File & directory access
+- 📡 Network information logging
+- 📤 Telegram bot integration for data exfiltration
 
 ---
 
 ## 🛠️ Installation
 
-1. **Clone the repository:**
+### 1. Clone the Repository
+```bash
+git clone https://github.com/harris9559/Spyware_tool.git
+cd Spyware_tool
+```
 
-   ```bash
-   git clone https://github.com/harris9559/Spyware_tool.git
-   cd Spyware_tool
-Install required packages:
+### 2. Set up Python Virtual Environment (Optional but recommended)
+```bash
+python -m venv venv
+venv\Scripts\activate  # On Windows
+```
 
-bash
-Copy
-Edit
+### 3. Install Dependencies
+```bash
 pip install -r requirements.txt
-Create a .env file with your Telegram Bot credentials:
+```
 
-env
-Copy
-Edit
-TELEGRAM_TOKEN=your_bot_token
-CHAT_ID=your_chat_id
-⚙️ How it Works
-On startup, the script collects system info, location, and media (audio, webcam, screenshot).
+### 4. Set up `.env` File
+Create a `.env` file with the following content:
+```
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
 
-It logs keystrokes continuously and sends them to a Telegram bot at intervals or when the log size exceeds a threshold.
+### 5. Build Executable
+```bash
+pyinstaller --noconfirm --onefile --windowed spy.py --add-data ".env;."
+```
+The final executable will be found in the `dist/` folder as `spy.exe`.
 
-Audio and screenshots are recorded in the background and sent silently.
+---
 
-📦 Dependencies
-pynput
+## 🚀 One-Click Execution
+Transfer the `spy.exe` to your testing machine/VM and double-click to execute. The script will silently start collecting data and sending it to your configured Telegram bot.
 
-pyautogui
+Note: Antivirus software may flag this executable. Always conduct your tests in isolated, controlled environments like VMs.
 
-opencv-python
+---
 
-sounddevice
+## 📁 Recommended Project Structure
+```
+Spyware_tool/
+├── .env
+├── spy.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── dist/
+├── build/
+├── venv/
+└── spy.spec
+```
 
-soundfile
+---
 
-geocoder
+## 🙈 .gitignore Recommendation
+Ensure the following files are excluded from version control:
+```
+venv/
+dist/
+build/
+*.spec
+*.exe
+__pycache__/
+.env
+```
 
-python-dotenv
+---
 
-requests
-
-Install all with:
-
-bash
-Copy
-Edit
-pip install -r requirements.txt
-🧪 For Testing / Simulation Only
-Tested on Windows 10
-
-Make sure you run with administrator privileges if certain permissions fail
-
-Recommended to use inside a virtual machine or isolated lab environment
-
-📜 License
-MIT License. See LICENSE file.
-
-🤖 Developed By
-Harshit Pandey
-GitHub: @harris9559
-
-
+## 📄 License
+This project is licensed under the MIT License. See `LICENSE` for more details.
 
