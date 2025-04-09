@@ -1,2 +1,10 @@
-".env" 
-"__pycache__/" 
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.exe
+*.spec
+.env
+build/
+dist/
+
