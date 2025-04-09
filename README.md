@@ -1,4 +1,4 @@
-# 🕵️ Spyware Tool (Educational Purpose Only)
+# 🕵️ Spyware Tool 
 
 This project is a **Python-based spyware simulation tool** developed for ethical hacking research and cybersecurity education.
 
